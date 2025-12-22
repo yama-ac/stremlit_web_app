@@ -1,0 +1,9 @@
+# streamlitインストール
+pip install streamlit
+
+# app.pyのファイルを作成
+app.py
+
+# app.pyのコードを実行
+streamlit run app.py
+
