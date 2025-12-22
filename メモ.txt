@@ -16,12 +16,11 @@ ssh-keygen -t rsa
 # public keyの確認
 ssh -T git@github.com
 
-git config --global user.name "yama-ac"
-git config --global user.email "hikarunba0101@gmail.com"
+git config --global user.name "アカウントID"
+git config --global user.email "メールアドレス"
 git config --global --list
 git init
 git add -A
 git status
 
-git remote add origin https://github.com/yama-ac/stremlit_web_app.git
 
