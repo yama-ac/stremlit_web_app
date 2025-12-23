@@ -4,52 +4,45 @@
 
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, timezone # timezoneを追加
 from streamlit_autorefresh import st_autorefresh
 
 # --- 設定 ---
 API_KEY = "9c5817265dcfbbb89aedf479ba8f1c4a"
 DEFAULT_CITY = "Osaka"
 
+# 日本標準時 (JST) の定義
+JST = timezone(timedelta(hours=+9), 'JST')
+
 st.set_page_config(page_title="Weather Dashboard Pro", layout="wide")
 
 st_autorefresh(interval=5000, key="datarefresh")
 
-# --- スタイル設定 (横スクロール対応) ---
+# --- スタイル設定 ---
 st.markdown("""
     <style>
-    /* 全体のフォントサイズ調整（スマホ向け） */
     html { font-size: 14px; }
-
     .clock-container { text-align: center; padding: 10px; border-bottom: 2px solid #e2e8f0; }
     .clock-display { font-size: 3rem !important; font-weight: 900; color: #2563eb; margin: 0; }
     .date-display { font-size: 1.2rem; color: #1e293b; font-weight: bold; }
-
     .main-card {
         background-color: #0f172a; color: white; padding: 20px; border-radius: 20px;
         text-align: center; margin-bottom: 20px; border: 4px solid #2563eb;
     }
-
-    /* 横スクロールコンテナ */
     .scroll-container {
         display: flex;
         overflow-x: auto;
         gap: 10px;
         padding-bottom: 15px;
-        -webkit-overflow-scrolling: touch; /* iOSスワイプ滑らかに */
+        -webkit-overflow-scrolling: touch;
     }
-
-    /* スクロールバーを非表示にする（任意） */
     .scroll-container::-webkit-scrollbar { display: none; }
-
-    /* 予報ボックス（横幅を固定してスタックを防ぐ） */
     .forecast-box {
-        flex: 0 0 100px; /* 横幅を100pxに固定 */
+        flex: 0 0 100px;
         background-color: white; padding: 10px; border-radius: 15px;
         text-align: center; border: 2px solid #e2e8f0;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
     }
-
     .time-label-large { font-size: 1.4rem !important; font-weight: 800; color: #1e293b; }
     .temp-label-red { font-size: 1.2rem; font-weight: bold; color: #ef4444; }
     </style>
@@ -63,7 +56,9 @@ def get_weather_data(city):
     except: return None
 
 # --- UI部分 ---
-now = datetime.now()
+# 現在時刻を日本時間（JST）で取得
+now = datetime.now(JST)
+
 st.markdown(f"""
     <div class="clock-container">
         <p class="date-display">{now.strftime("%Y年%m月%d日 (%a)")}</p>
@@ -79,7 +74,8 @@ if city_input:
         st.error(f"都市 '{city_input}' のデータが見つかりませんでした。")
     else:
         forecast_list = data['list']
-        current_data = min(forecast_list, key=lambda x: abs(datetime.fromtimestamp(x['dt']) - now))
+        # 予報データ比較用（予報のdtはUTCなので、比較のためにnowも一度UTC的な数値に合わせるか、dtをJSTに変換する）
+        current_data = min(forecast_list, key=lambda x: abs(datetime.fromtimestamp(x['dt'], JST) - now))
         icon_url = f"http://openweathermap.org/img/wn/{current_data['weather'][0]['icon']}@4x.png"
 
         st.markdown(f"""
@@ -91,12 +87,11 @@ if city_input:
             </div>
         """, unsafe_allow_html=True)
 
-        # --- 2. 3時間ごとのタイムライン (横スクロール化) ---
+        # --- 2. 3時間ごとのタイムライン ---
         st.subheader("⏱️ 3時間ごとの詳細予報")
-
         timeline_html = '<div class="scroll-container">'
-        for item in forecast_list[:12]: # 表示件数を少し増やしてスクロール感を出す
-            t_obj = datetime.fromtimestamp(item['dt'])
+        for item in forecast_list[:12]:
+            t_obj = datetime.fromtimestamp(item['dt'], JST) # ここもJSTで表示
             icon = item['weather'][0]['icon']
             temp = item['main']['temp']
             desc = item['weather'][0]['description']
@@ -110,12 +105,12 @@ if city_input:
         timeline_html += '</div>'
         st.markdown(timeline_html, unsafe_allow_html=True)
 
-        # --- 3. 週間予報 (横スクロール化) ---
+        # --- 3. 週間予報 ---
         st.subheader("🗓️ 週間予報 (5日間)")
         daily_forecasts = []
         seen_days = set()
         for item in forecast_list:
-            dt_obj = datetime.fromtimestamp(item['dt'])
+            dt_obj = datetime.fromtimestamp(item['dt'], JST) # JSTで判定
             day_str = dt_obj.strftime('%Y-%m-%d')
             if day_str != now.strftime('%Y-%m-%d') and day_str not in seen_days:
                 if dt_obj.hour >= 12:
@@ -124,7 +119,7 @@ if city_input:
 
         week_html = '<div class="scroll-container">'
         for day_data in daily_forecasts:
-            d_obj = datetime.fromtimestamp(day_data['dt'])
+            d_obj = datetime.fromtimestamp(day_data['dt'], JST)
             icon = day_data['weather'][0]['icon']
             temp = day_data['main']['temp']
             desc = day_data['weather'][0]['description']
@@ -138,6 +133,5 @@ if city_input:
                 </div>"""
         week_html += '</div>'
         st.markdown(week_html, unsafe_allow_html=True)
-
 else:
     st.info("左側のサイドバーに都市名を入力してください。")
