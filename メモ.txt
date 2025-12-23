@@ -34,12 +34,6 @@ git add -A
 git commit -m "commit実行"
 git push -u origin main
 
-git init && git add -A && git commit -m "commit実行" && git push -u origin main
-
-git pull origin -A
-git pull --rebase origin -A
-git push -f origin -A
-
 =======================================================================
 # エラー発生時
 # 1. リモートの変更を取り込んで自分の変更をその上に乗せる
