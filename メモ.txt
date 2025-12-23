@@ -36,3 +36,20 @@ git pull --rebase origin -A
 git push -f origin -A
 
 
+# エラー発生時
+# 1. リモートの変更を取り込んで自分の変更をその上に乗せる
+git pull --rebase origin main
+
+# 2. その後、改めてPushする
+git push origin main
+
+# 3. リモートの変更をマージする
+git pull origin main
+
+# 4. (エディタが開いたら、そのまま保存して閉じる)
+
+# 5. その後、Pushする
+git push origin main
+
+## 強制的に上書き
+git push -f origin main
