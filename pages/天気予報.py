@@ -17,7 +17,7 @@ JST = timezone(timedelta(hours=+9), 'JST')
 # レイアウト設定
 st.set_page_config(page_title="Weather Dashboard Pro", layout="wide")
 
-# 5分ごとに自動更新
+# 自動更新 (5分)
 st_autorefresh(interval=300000, key="datarefresh")
 
 # --- スタイル設定 ---
@@ -71,12 +71,11 @@ if city_input:
         st.error(f"都市 '{city_input}' のデータが見つかりませんでした。")
     else:
         forecast_list = data['list']
-        # 現在時刻に最も近い予報データを取得
         current_data = min(forecast_list, key=lambda x: abs(datetime.fromtimestamp(x['dt'], JST) - now))
         icon_url = f"http://openweathermap.org/img/wn/{current_data['weather'][0]['icon']}@4x.png"
         current_pop = int(current_data.get('pop', 0) * 100)
 
-        # 1. メインカード表示
+        # 1. メインカード
         st.markdown(f"""
             <div class="main-card">
                 <h2 style="margin:0; color: #60a5fa; letter-spacing: 3px;">{data['city']['name'].upper()}</h2>
@@ -92,44 +91,22 @@ if city_input:
             </div>
         """, unsafe_allow_html=True)
 
-        # 2. 地図と3時間予報を横並びに配置
-        col1, col2 = st.columns([1, 1])
-
-        with col1:
-            st.subheader("🗺️ リアルタイム雨雲マップ")
-            lat, lon = data['city']['coord']['lat'], data['city']['coord']['lon']
-            m = folium.Map(location=[lat, lon], zoom_start=8, tiles="OpenStreetMap")
-
-            # 雨雲レイヤーの追加
-            rain_layer_url = f"https://tile.openweathermap.org/map/precipitation_new/{{z}}/{{x}}/{{y}}.png?appid={API_KEY}"
-            folium.TileLayer(
-                tiles=rain_layer_url,
-                attr="OpenWeatherMap",
-                name="Rain Radar",
-                overlay=True,
-                opacity=0.6
-            ).add_to(m)
-
-            # 都市にマーカーを設置
-            folium.Marker([lat, lon], popup=data['city']['name']).add_to(m)
-            st_folium(m, width="100%", height=400, returned_objects=[])
-
-        with col2:
-            st.subheader("⏱️ 3時間ごとの予報")
-            # スクロール形式ではなく、グリッド表示に調整（カラム内用）
-            timeline_html = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 400px; overflow-y: auto; padding-right: 10px;">'
-            for item in forecast_list[:12]:
-                t_obj = datetime.fromtimestamp(item['dt'], JST)
-                pop = int(item.get('pop', 0) * 100)
-                timeline_html += f"""
-                    <div class="forecast-box" style="flex: none; width: auto; margin-bottom:10px;">
-                        <div style="font-weight: bold; color: #64748b;">{t_obj.strftime('%H:%M')}</div>
-                        <img src="http://openweathermap.org/img/wn/{item['weather'][0]['icon']}@2x.png" width="50">
-                        <div class="temp-label-red" style="font-size:1.2rem;">{item['main']['temp']}℃</div>
-                        <div class="pop-label-blue" style="font-size:0.9rem;">☂️ {pop}%</div>
-                    </div>"""
-            timeline_html += '</div>'
-            st.markdown(timeline_html, unsafe_allow_html=True)
+        # 2. 3時間ごとの予報
+        st.subheader("⏱️ 3時間ごとの詳細予報")
+        timeline_html = '<div class="scroll-container">'
+        for item in forecast_list[:15]:
+            t_obj = datetime.fromtimestamp(item['dt'], JST)
+            pop = int(item.get('pop', 0) * 100)
+            timeline_html += f"""
+                <div class="forecast-box">
+                    <div class="time-label-large">{t_obj.strftime('%H:%M')}</div>
+                    <img src="http://openweathermap.org/img/wn/{item['weather'][0]['icon']}@2x.png" width="60">
+                    <div class="temp-label-red">{item['main']['temp']}℃</div>
+                    <div class="pop-label-blue">☂️ {pop}%</div>
+                    <div style="font-size:0.8rem; color:#1e293b; font-weight:bold; margin-top:5px;">{item['weather'][0]['description']}</div>
+                </div>"""
+        timeline_html += '</div>'
+        st.markdown(timeline_html, unsafe_allow_html=True)
 
         # 3. 週間予報
         st.subheader("🗓️ 週間予報 (5日間)")
@@ -139,7 +116,7 @@ if city_input:
             dt_obj = datetime.fromtimestamp(item['dt'], JST)
             day_str = dt_obj.strftime('%Y-%m-%d')
             if day_str != now.strftime('%Y-%m-%d') and day_str not in seen_days:
-                if dt_obj.hour >= 12: # 正午付近のデータを代表値とする
+                if dt_obj.hour >= 12:
                     daily_forecasts.append(item)
                     seen_days.add(day_str)
 
@@ -158,5 +135,35 @@ if city_input:
                 </div>"""
         week_html += '</div>'
         st.markdown(week_html, unsafe_allow_html=True)
+
+        # 4. 天気地図 (週間予報の下に配置)
+        st.markdown("---")
+        st.subheader("🗺️ リアルタイム雨雲マップ")
+        lat, lon = data['city']['coord']['lat'], data['city']['coord']['lon']
+
+        # 地図の土台を控えめな色(CartoDB positron)にして、雨雲を際立たせる
+        m = folium.Map(location=[lat, lon], zoom_start=8, tiles="CartoDB positron")
+
+        # 雨雲レイヤー (opacity=0.9 で濃く表示)
+        rain_layer_url = f"https://tile.openweathermap.org/map/precipitation_new/{{z}}/{{x}}/{{y}}.png?appid={API_KEY}"
+        folium.TileLayer(
+            tiles=rain_layer_url,
+            attr="OpenWeatherMap",
+            name="Rain Radar",
+            overlay=True,
+            opacity=0.9,  # 濃さを調整
+            control=True
+        ).add_to(m)
+
+        # 現在地のマーカー
+        folium.Marker(
+            [lat, lon],
+            popup=data['city']['name'],
+            icon=folium.Icon(color='blue', icon='info-sign')
+        ).add_to(m)
+
+        # 地図を表示
+        st_folium(m, width="100%", height=550, returned_objects=[])
+
 else:
     st.info("左側のサイドバーに都市名を入力してください。")
