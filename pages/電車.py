@@ -1,53 +1,74 @@
 import streamlit as st
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+import pandas as pd
+from datetime import datetime
 
-st.set_page_config(page_title="熊本県 鉄道運行状況", page_icon="🚃")
+# ページの設定
+st.set_page_config(page_title="本日の熊本県運行状況", layout="wide")
 
-st.title("🚃 熊本県 鉄道運行状況")
-st.caption("Yahoo!路線情報の九州エリアから情報を取得します")
+st.title("🚃 今日の熊本県 鉄道運行状況")
+st.write(f"取得日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}")
 
-def get_train_status():
-    url = "https://transit.yahoo.co.jp/diainfo/area/7" # 九州エリアのURL
-    res = requests.get(url)
-    soup = BeautifulSoup(res.text, "html.parser")
+# 運行情報を取得する関数
+def get_today_status():
+    # Yahoo!路線情報（九州エリア）
+    url = "https://transit.yahoo.co.jp/diainfo/area/7"
 
-    lines = []
-    # 熊本関連のキーワードでフィルタリング
-    target_keywords = ["JR九州", "熊本", "市電", "阿蘇", "肥薩"]
+    try:
+        res = requests.get(url)
+        res.raise_for_status() # エラーがあれば例外を出す
+        soup = BeautifulSoup(res.text, "html.parser")
 
-    # 運行情報のテーブルを取得
-    table = soup.find("div", class_="elmTblKyuhon")
-    if table:
-        for tr in table.find_all("tr")[1:]: # ヘッダー以外
-            tds = tr.find_all("td")
-            if len(tds) >= 3:
-                name = tds[0].text.strip()
-                status = tds[1].text.strip()
-                detail = tds[2].text.strip()
+        # 熊本県に関連する路線のキーワード
+        target_keywords = ["JR九州", "熊本", "阿蘇", "肥薩", "三角線", "鹿児島本線", "九州新幹線"]
 
-                # 熊本に関連する路線のみ抽出
-                if any(k in name for k in target_keywords):
-                    lines.append({
-                        "路線名": name,
-                        "状況": status,
-                        "詳細": detail
+        results = []
+
+        # 運行情報のテーブルを探す
+        table = soup.find("div", class_="elmTblKyuhon")
+        if not table:
+            return None
+
+        rows = table.find_all("tr")
+        for row in rows[1:]: # ヘッダーを飛ばす
+            cols = row.find_all("td")
+            if len(cols) >= 3:
+                line_name = cols[0].text.strip()
+                status = cols[1].text.strip()
+                detail = cols[2].text.strip()
+
+                # キーワードに合致する路線のみ保存
+                if any(k in line_name for k in target_keywords):
+                    results.append({
+                        "路線名": line_name,
+                        "運行状況": status,
+                        "詳細内容": detail
                     })
-    return lines
+        return results
 
-if st.button("情報を更新"):
-    data = get_train_status()
-    if data:
-        df = pd.DataFrame(data)
+    except Exception as e:
+        st.error(f"データ取得中にエラーが発生しました: {e}")
+        return None
 
-        # 状況に応じて色分け
-        def color_status(val):
-            color = 'red' if '見合わせ' in val or '遅れ' in val else 'green'
-            return f'color: {color}'
+# メイン処理
+status_data = get_today_status()
 
-        st.table(df.style.applymap(color_status, subset=['状況']))
-    else:
-        st.info("現在、熊本エリアに目立った遅延・運休情報はありません。")
+if status_data:
+    # データを表形式（DataFrame）にする
+    df = pd.DataFrame(status_data)
 
-st.info("※この情報はYahoo!路線情報の情報を元にしています。正確な情報は各公式サイトをご確認ください。")
+    # 状況が「平常運転」以外の場合に背景色を変える装飾（任意）
+    def highlight_status(val):
+        color = '#ffcccc' if '見合わせ' in val or '遅れ' in val or '運休' in val else 'white'
+        return f'background-color: {color}'
+
+    # 表示
+    st.subheader("現在の状況")
+    st.table(df) # シンプルな表として表示
+
+else:
+    st.success("現在、熊本県内の対象路線に目立った遅延・運休情報はありません。")
+
+st.divider()
+st.caption("※データ元：Yahoo!路線情報。この表示は一時的なもので、再読み込みすると最新の状態に更新されます。")
