@@ -6,72 +6,97 @@ import requests
 from datetime import datetime
 
 # --- 設定 ---
-API_KEY = "9c5817265dcfbbb89aedf479ba8f1c4a"
-CITY = "Osaka,jp"
-URL_CURRENT = f"https://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric&lang=ja"
-URL_FORECAST = f"https://api.openweathermap.org/data/2.5/forecast?q={CITY}&appid={API_KEY}&units=metric&lang=ja"
+API_KEY = "9c5817265dcfbbb89aedf479ba8f1c4a"  # 取得したAPIキーに書き換えてください
 
-st.set_page_config(page_title="Osaka Weather Pro", layout="centered")
+# ページ設定
+st.set_page_config(page_title="Weather Dashboard", layout="centered")
 
-# スタイル
+# --- スタイル設定 ---
 st.markdown("""
     <style>
-    .metric-card {
-        background-color: #ffffff; padding: 20px; border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; color: #1e293b;
+    .main { background-color: #f8fafc; }
+    .current-box {
+        background-color: #1e293b;
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    .forecast-card {
+        background-color: white;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     </style>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-@st.cache_data(ttl=600)
-def get_weather(url):
-    res = requests.get(url)
-    return res.json()
+# --- データ取得関数 ---
+def get_weather_data(city_name):
+    # 現在の天気
+    current_url = f"https://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={API_KEY}&units=metric&lang=ja"
+    # 5日間予報
+    forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?q={city_name}&appid={API_KEY}&units=metric&lang=ja"
 
-try:
-    # --- 1. 現在の天気 ---
-    current_data = get_weather(URL_CURRENT)
-    if current_data.get("cod") != 200:
-        st.error(f"エラー: {current_data.get('message')}")
+    curr_res = requests.get(current_url).json()
+    fore_res = requests.get(forecast_url).json()
+
+    return curr_res, fore_res
+
+# --- UI部分 ---
+st.title("🌡️ お天気検索ダッシュボード")
+
+# 地域入力欄 (デフォルトを "Osaka" に設定)
+city_input = st.text_input("都市名を入力してください（例: Tokyo, Nagoya, London）", value="Osaka")
+
+if city_input:
+    curr_data, fore_data = get_weather_data(city_input)
+
+    # 都市が見つからない場合の処理
+    if curr_data.get("cod") != 200:
+        st.error(f"都市 '{city_input}' が見つかりませんでした。綴りを確認してください。")
     else:
-        main = current_data['main']
-        weather = current_data['weather'][0]
-        icon_id = weather['icon'] # OWM独自のアイコンID
+        # 1. 現在の天気表示
+        st.subheader(f"📍 {curr_data['name']} の現在の天気")
+
+        main = curr_data['main']
+        weather = curr_data['weather'][0]
+        icon_id = weather['icon']
         icon_url = f"http://openweathermap.org/img/wn/{icon_id}@4x.png"
 
-        st.title(f"🏙️ {current_data['name']} の天気")
+        st.markdown(f"""
+            <div class="current-box">
+                <img src="{icon_url}" style="width:120px;">
+                <h1 style="margin:0; font-size: 3rem; color: white;">{main['temp']}℃</h1>
+                <p style="font-size: 1.5rem; opacity: 0.9;">{weather['description']}</p>
+                <p style="font-size: 0.9rem; opacity: 0.7;">湿度: {main['humidity']}% / 体感: {main['feels_like']}℃</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # メイン表示
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.image(icon_url)
-        with col2:
-            st.metric("現在の気温", f"{main['temp']} ℃")
-            st.write(f"**天気:** {weather['description']}")
-            st.write(f"**湿度:** {main['humidity']}% / **体感:** {main['feels_like']}℃")
+        # 2. 5日間予報（3時間おき）
+        st.subheader("🕒 今後の予報 (3時間ごと)")
 
-        st.divider()
-
-        # --- 2. 5日間予報（3時間おき） ---
-        st.subheader("🗓️ 5日間の予報（3時間ごと）")
-        forecast_data = get_weather(URL_FORECAST)
-
-        # 最初の8つ（24時間分）をピックアップして表示
-        forecast_list = forecast_data['list'][:8]
+        # 予報データを横並びにする
+        forecast_list = fore_data['list'][:8] # 直近24時間分
         cols = st.columns(4)
 
         for i, item in enumerate(forecast_list):
             with cols[i % 4]:
-                dt = datetime.fromtimestamp(item['dt']).strftime('%m/%d %H:%M')
+                dt = datetime.fromtimestamp(item['dt']).strftime('%H:%M')
                 f_icon = item['weather'][0]['icon']
+                f_temp = item['main']['temp']
+
                 st.markdown(f"""
-                    <div class="metric-card">
-                        <p style="font-size:0.8rem;">{dt}</p>
+                    <div class="forecast-card">
+                        <div style="color: #64748b; font-size: 0.8rem; font-weight: bold;">{dt}</div>
                         <img src="http://openweathermap.org/img/wn/{f_icon}.png" width="50">
-                        <p style="font-weight:bold; margin:0;">{item['main']['temp']}℃</p>
+                        <div style="font-size: 1.1rem; font-weight: bold; color: #1e293b;">{f_temp}℃</div>
                     </div>
                 """, unsafe_allow_html=True)
-                st.write("")
+                st.write("") # スペース用
 
-except Exception as e:
-    st.warning("APIキーが有効になるまで時間がかかる場合があります（401エラーなど）。")
+else:
+    st.info("都市名を入力してエンターキーを押してください。")
