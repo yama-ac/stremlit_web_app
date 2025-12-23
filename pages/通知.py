@@ -1,21 +1,24 @@
 import streamlit as st
 import time
 
-st.set_page_config(page_title="通知デモ", layout="centered")
+st.title("タイマー通知アプリ")
+st.write("下のボタンを押すと、10秒後に通知が届きます。")
 
-st.title("🚀 アクション完了通知")
+if st.button('10秒タイマーを開始'):
+    # プログレスバー（進行状況）を表示して、視覚的に分かりやすくします
+    progress_text = "10秒後に通知します..."
+    my_bar = st.progress(0, text=progress_text)
 
-# ボタンの作成
-if st.button('データ処理を実行'):
-    # 1. 処理中の状態を表示
-    with st.spinner('処理しています...'):
-        time.sleep(2)  # ここに実際の処理を記述します
+    # 10秒間待機（1秒ごとにバーを更新）
+    for percent_complete in range(100):
+        time.sleep(0.1)  # 0.1秒 × 100回 = 10秒
+        my_bar.progress(percent_complete + 1, text=progress_text)
 
-    # 2. 右下にふわっと通知（トースト）
-    st.toast('処理が正常に完了しました！', icon='✅')
+    # プログレスバーを消去
+    my_bar.empty()
 
-    # 3. 画面の中央にしっかりメッセージを表示（任意）
-    st.success('すべてのタスクが終了しました。')
+    # 通知（トースト）を表示
+    st.toast('10秒経過しました！', icon='⏰')
 
-    # 4. お祝いのエフェクト（必要に応じて）
-    st.balloons()
+    # 画面上にも完了メッセージを表示
+    st.success('時間です！通知を送りました。')
