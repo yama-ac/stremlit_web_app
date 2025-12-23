@@ -19,6 +19,7 @@ ssh-keygen -t rsa
 # public keyの確認
 ssh -T git@github.com
 
+=======================================================================
 git config --global user.name "アカウントID"
 git config --global user.email "メールアドレス"
 git config --global --list
@@ -26,6 +27,7 @@ git init
 git add -A
 git status
 
+=======================================================================
 # gitの更新方法
 git init
 git add -A
@@ -38,7 +40,7 @@ git pull origin -A
 git pull --rebase origin -A
 git push -f origin -A
 
-
+=======================================================================
 # エラー発生時
 # 1. リモートの変更を取り込んで自分の変更をその上に乗せる
 git pull --rebase origin main
@@ -56,3 +58,13 @@ git push origin main
 
 ## 強制的に上書き
 git push -f origin main
+
+=======================================================================
+# 1. リモートの最新情報を取得する
+git fetch origin
+
+2. リモートの変更を取り込む（リベース）
+git pull --rebase origin main
+
+3. 再度Pushする
+git push origin main
