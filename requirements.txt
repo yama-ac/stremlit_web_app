@@ -5,3 +5,4 @@ requests == 2.32.5
 streamlit-push-notifications == 0.1
 streamlit-calendar == 1.4.0
 beautifulsoup4 == 4.14.3
+streamlit-folium == 0.25.3
