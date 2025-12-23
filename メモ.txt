@@ -28,11 +28,14 @@ git add -A
 git status
 
 =======================================================================
-# gitの更新方法
 git init
+# gitの更新方法
 git add -A
 git commit -m "commit実行"
 git push -u origin main
+
+git add -A && git commit -m "commit実行" && git push -u origin main
+
 
 =======================================================================
 # エラー発生時
