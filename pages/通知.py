@@ -1,14 +1,17 @@
 import streamlit as st
-import time
 
-st.title("Streamlit 標準通知デモ")
+@st.dialog("重要な確認")
+def confirm_action():
+    st.write("この操作を実行するとデータが上書きされます。よろしいですか？")
+    if st.button("実行する"):
+        st.session_state.confirmed = True
+        st.rerun()
 
-if st.button("標準通知を表示"):
-    # 1. 右下にふわっと出るトースト
-    st.toast("データを保存しました！", icon="💾")
+st.title("ダイアログデモ")
 
-    # 2. 画面内に固定されるメッセージ
-    st.success("全ての処理が正常に完了しました。")
+if st.button("削除ボタン"):
+    confirm_action()
 
-    # 3. お祝いエフェクト
-    st.balloons()
+if st.session_state.get("confirmed"):
+    st.error("データを削除しました。")
+    st.session_state.confirmed = False
