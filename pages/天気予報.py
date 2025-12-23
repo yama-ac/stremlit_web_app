@@ -9,146 +9,135 @@ from streamlit_autorefresh import st_autorefresh
 
 # --- 設定 ---
 API_KEY = "9c5817265dcfbbb89aedf479ba8f1c4a"
-DEFAULT_CITY = "Osaka,jp"
+DEFAULT_CITY = "Osaka"
 
-st.set_page_config(page_title="Weather App Design", layout="centered")
+st.set_page_config(page_title="Weather Dashboard Pro", layout="wide")
 
-# 自動更新（10秒）
-st_autorefresh(interval=10000, key="datarefresh")
+st_autorefresh(interval=5000, key="datarefresh")
 
-# --- 画像のUIを再現するカスタムCSS ---
+# --- スタイル設定 (横スクロール対応) ---
 st.markdown("""
     <style>
-    /* 全体の背景色（ダーク） */
-    .stApp {
-        background-color: #121212;
-        color: white;
+    /* 全体のフォントサイズ調整（スマホ向け） */
+    html { font-size: 14px; }
+
+    .clock-container { text-align: center; padding: 10px; border-bottom: 2px solid #e2e8f0; }
+    .clock-display { font-size: 3rem !important; font-weight: 900; color: #2563eb; margin: 0; }
+    .date-display { font-size: 1.2rem; color: #1e293b; font-weight: bold; }
+
+    .main-card {
+        background-color: #0f172a; color: white; padding: 20px; border-radius: 20px;
+        text-align: center; margin-bottom: 20px; border: 4px solid #2563eb;
     }
 
-    /* 共通カードデザイン */
-    .card {
-        background-color: #1e1e1e;
-        padding: 20px;
-        border-radius: 20px;
-        margin-bottom: 15px;
+    /* 横スクロールコンテナ */
+    .scroll-container {
+        display: flex;
+        overflow-x: auto;
+        gap: 10px;
+        padding-bottom: 15px;
+        -webkit-overflow-scrolling: touch; /* iOSスワイプ滑らかに */
     }
 
-    /* 上部の日別リスト */
-    .day-box {
-        text-align: center;
-        padding: 10px;
-        border-radius: 20px;
-        background: #2a2a2a;
-        min-width: 60px;
-    }
-    .day-box-selected {
-        border: 2px solid #ffffff;
-        background: #333333;
+    /* スクロールバーを非表示にする（任意） */
+    .scroll-container::-webkit-scrollbar { display: none; }
+
+    /* 予報ボックス（横幅を固定してスタックを防ぐ） */
+    .forecast-box {
+        flex: 0 0 100px; /* 横幅を100pxに固定 */
+        background-color: white; padding: 10px; border-radius: 15px;
+        text-align: center; border: 2px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
     }
 
-    /* 巨大な気温表示 */
-    .main-temp {
-        font-size: 80px;
-        font-weight: 200;
-        margin: 0;
-    }
-
-    /* 1時間ごとのボックス */
-    .hour-box {
-        text-align: center;
-        font-size: 0.8rem;
-        color: #aaaaaa;
-    }
-
-    /* 下部の詳細カード（降水量・風） */
-    .detail-card {
-        background-color: #1e1e1e;
-        padding: 25px;
-        border-radius: 25px;
-        height: 180px;
-    }
+    .time-label-large { font-size: 1.4rem !important; font-weight: 800; color: #1e293b; }
+    .temp-label-red { font-size: 1.2rem; font-weight: bold; color: #ef4444; }
     </style>
+    """, unsafe_allow_html=True)
+
+def get_weather_data(city):
+    url = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={API_KEY}&units=metric&lang=ja"
+    try:
+        res = requests.get(url).json()
+        return res
+    except: return None
+
+# --- UI部分 ---
+now = datetime.now()
+st.markdown(f"""
+    <div class="clock-container">
+        <p class="date-display">{now.strftime("%Y年%m月%d日 (%a)")}</p>
+        <p class="clock-display">{now.strftime("%H:%M:%S")}</p>
+    </div>
 """, unsafe_allow_html=True)
 
-def get_weather(city):
-    url = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={API_KEY}&units=metric&lang=ja"
-    return requests.get(url).json()
+city_input = st.sidebar.text_input("表示地域を検索", value=DEFAULT_CITY)
 
-# --- UI構築 ---
-data = get_weather(DEFAULT_CITY)
+if city_input:
+    data = get_weather_data(city_input)
+    if not data or data.get("cod") != "200":
+        st.error(f"都市 '{city_input}' のデータが見つかりませんでした。")
+    else:
+        forecast_list = data['list']
+        current_data = min(forecast_list, key=lambda x: abs(datetime.fromtimestamp(x['dt']) - now))
+        icon_url = f"http://openweathermap.org/img/wn/{current_data['weather'][0]['icon']}@4x.png"
 
-if data.get("cod") == "200":
-    now = datetime.now()
-    current = data['list'][0]
-
-    # 1. ヘッダー（10日間の天気予報風）
-    st.markdown("### ← 10 日間の天気予報")
-    day_cols = st.columns(6)
-    for i in range(6):
-        item = data['list'][i*8] # 24時間おきのデータ
-        dt = datetime.fromtimestamp(item['dt'])
-        with day_cols[i]:
-            # 今日を選択中風にする
-            cls = "day-box-selected" if i == 0 else "day-box"
-            st.markdown(f"""
-                <div class="{cls}">
-                    <div style="font-size:0.7rem;">{item['main']['temp_max']:.0f}°</div>
-                    <div style="font-size:0.7rem; color:#888;">{item['main']['temp_min']:.0f}°</div>
-                    <img src="http://openweathermap.org/img/wn/{item['weather'][0]['icon']}.png" width="30">
-                    <div style="font-size:0.6rem;">{dt.strftime('%a')}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # 2. メイン気温エリア
-    st.write(now.strftime("%m月%d日"))
-    st.subheader("大阪市淀川区")
-
-    col_main1, col_main2 = st.columns([2, 1])
-    with col_main1:
-        st.markdown(f'<p class="main-temp">{current["main"]["temp"]:.0f}°<span style="font-size:40px;">{current["main"]["temp_min"]:.0f}°</span></p>', unsafe_allow_html=True)
-        st.markdown(f'<h3>{current["weather"][0]["description"]}</h3>', unsafe_allow_html=True)
-    with col_main2:
-        icon_id = current['weather'][0]['icon']
-        st.image(f"http://openweathermap.org/img/wn/{icon_id}@4x.png", width=150)
-
-    # 3. 1時間ごとの天気予報
-    with st.container():
-        st.markdown('<div class="card">🕒 1時間ごとの天気予報', unsafe_allow_html=True)
-        h_cols = st.columns(8)
-        for i in range(8):
-            item = data['list'][i]
-            with h_cols[i]:
-                st.markdown(f"""
-                    <div class="hour-box">
-                        <div>{item['main']['temp']:.0f}°</div>
-                        <img src="http://openweathermap.org/img/wn/{item['weather'][0]['icon']}.png" width="30">
-                        <div>{datetime.fromtimestamp(item['dt']).strftime('%H:%00')}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # 4. 下部詳細（降水量・風）
-    col_inf1, col_inf2 = st.columns(2)
-    with col_inf1:
-        rain = current.get('rain', {'1h': 0}).get('1h', 0)
         st.markdown(f"""
-            <div class="detail-card">
-                <p style="color:#aaa;">☔ 降水量</p>
-                <p style="font-size:2.5rem; margin:0;">{rain} <span style="font-size:1.2rem;">mm</span></p>
-                <p style="font-size:0.8rem; color:#888; margin-top:10px;">一日の総雨量</p>
+            <div class="main-card">
+                <h2 style="margin:0; color: #60a5fa; letter-spacing: 2px;">{data['city']['name'].upper()}</h2>
+                <img src="{icon_url}" style="width:100px;">
+                <h1 style="font-size: 3.5rem; margin: 0;">{current_data['main']['temp']}℃</h1>
+                <p style="font-size: 1.5rem; margin: 0; font-weight: bold;">{current_data['weather'][0]['description']}</p>
             </div>
         """, unsafe_allow_html=True)
-    with col_inf2:
-        wind = current['wind']['speed']
-        st.markdown(f"""
-            <div class="detail-card">
-                <p style="color:#aaa;">🍃 風</p>
-                <p style="font-size:2.5rem; margin:0;">{wind} <span style="font-size:1.2rem;">m/s</span></p>
-                <p style="font-size:0.8rem; color:#888; margin-top:10px;">北東の風</p>
-            </div>
-        """, unsafe_allow_html=True)
+
+        # --- 2. 3時間ごとのタイムライン (横スクロール化) ---
+        st.subheader("⏱️ 3時間ごとの詳細予報")
+
+        timeline_html = '<div class="scroll-container">'
+        for item in forecast_list[:12]: # 表示件数を少し増やしてスクロール感を出す
+            t_obj = datetime.fromtimestamp(item['dt'])
+            icon = item['weather'][0]['icon']
+            temp = item['main']['temp']
+            desc = item['weather'][0]['description']
+            timeline_html += f"""
+                <div class="forecast-box">
+                    <div class="time-label-large">{t_obj.strftime('%H:%M')}</div>
+                    <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="50">
+                    <div class="temp-label-red">{temp}℃</div>
+                    <div style="font-size:0.7rem; color:#1e293b; font-weight:bold;">{desc}</div>
+                </div>"""
+        timeline_html += '</div>'
+        st.markdown(timeline_html, unsafe_allow_html=True)
+
+        # --- 3. 週間予報 (横スクロール化) ---
+        st.subheader("🗓️ 週間予報 (5日間)")
+        daily_forecasts = []
+        seen_days = set()
+        for item in forecast_list:
+            dt_obj = datetime.fromtimestamp(item['dt'])
+            day_str = dt_obj.strftime('%Y-%m-%d')
+            if day_str != now.strftime('%Y-%m-%d') and day_str not in seen_days:
+                if dt_obj.hour >= 12:
+                    daily_forecasts.append(item)
+                    seen_days.add(day_str)
+
+        week_html = '<div class="scroll-container">'
+        for day_data in daily_forecasts:
+            d_obj = datetime.fromtimestamp(day_data['dt'])
+            icon = day_data['weather'][0]['icon']
+            temp = day_data['main']['temp']
+            desc = day_data['weather'][0]['description']
+            week_html += f"""
+                <div class="forecast-box">
+                    <div class="time-label-large" style="font-size: 1.2rem !important;">{d_obj.strftime('%m/%d')}</div>
+                    <div style="color: #1e293b; font-weight: bold; font-size:0.8rem;">({d_obj.strftime('%a')})</div>
+                    <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="50">
+                    <div class="temp-label-red">{temp}℃</div>
+                    <div style="font-size:0.7rem; color:#1e293b; font-weight:bold;">{desc}</div>
+                </div>"""
+        week_html += '</div>'
+        st.markdown(week_html, unsafe_allow_html=True)
 
 else:
-    st.error("データの取得に失敗しました。APIキーを確認してください。")
+    st.info("左側のサイドバーに都市名を入力してください。")
