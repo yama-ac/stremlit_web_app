@@ -1,31 +1,8 @@
 import streamlit as st
-from streamlit_calendar import calendar
 
-st.title("Streamlit カレンダーデモ")
+st.title("Googleカレンダーの表示")
 
-calendar_options = {
-    "editable": "true",
-    "selectable": "true",
-    "headerToolbar": {
-        "left": "prev,next today",
-        "center": "title",
-        "right": "dayGridMonth,timeGridWeek,timeGridDay",
-    },
-    "initialView": "dayGridMonth",
-}
+# Googleカレンダーの「設定と共有」から取得した公開URL（iframeのsrc部分）
+calendar_url = "https://calendar.google.com/calendar/embed?src=0613061ae80a670356c6d4b09643f5ac0b5d32a394568be7b8ccd90fc05c88cb@group.calendar.google.com"
 
-calendar_events = [
-    {
-        "title": "ミーティング",
-        "start": "2023-12-25T10:00:00",
-        "end": "2023-12-25T11:00:00",
-    },
-    {
-        "title": "ランチ",
-        "start": "2023-12-26",
-        "allDay": "true",
-    }
-]
-
-state = calendar(events=calendar_events, options=calendar_options)
-st.write(state)
+st.components.v1.iframe(calendar_url, height=600, scrolling=True)
