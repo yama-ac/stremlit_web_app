@@ -8,7 +8,7 @@ def send_line(message, token):
     requests.post(url, headers=headers, data=data)
 
 st.title("LINE通知デモ")
-token = "j3BWX3Sxu9vNhkB3OUfznm8HOzZ85K1DgwA7JHK0Q8T" # 実際には st.secrets 等で管理を推奨
+token = "1QpyNMEQuWehUu05/WkZ8UI39dcYQGmSs8Yu4q2EgSf/4D+8SpkEi4VZstvWMFXHNY26kcCPG/xb8QTcVSrDwWFaCzIBlcr1IINJ1mgt5rP3vx2I+Y3x2pCFYXfimBRh8oVmiED55HeKrqpUasvgjAdB04t89/1O/w1cDnyilFU=" # 実際には st.secrets 等で管理を推奨
 
 if st.button("LINEに通知を送る"):
     send_line("Streamlitアプリから通知が届きました！", token)
