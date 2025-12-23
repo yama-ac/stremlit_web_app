@@ -1,3 +1,6 @@
+# Gemini
+https://gemini.google.com/app/8852d57f922a6fdd?hl=ja
+
 # streamlitインストール
 pip install streamlit
 
@@ -26,6 +29,9 @@ git status
 # gitの更新方法
 git add -A
 git commit -m "commit実行"
+git pull origin -A
+git pull --rebase origin -A
 git push -u origin main
+
 
 
