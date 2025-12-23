@@ -12,55 +12,62 @@ API_KEY = "9c5817265dcfbbb89aedf479ba8f1c4a"
 DEFAULT_CITY = "Osaka"
 JST = timezone(timedelta(hours=+9), 'JST')
 
+# layout="wide" でStreamlit側の制限を解除
 st.set_page_config(page_title="Weather Dashboard Pro", layout="wide")
 
 st_autorefresh(interval=5000, key="datarefresh")
 
-# --- スタイル設定 (PC・タブレット向けの最適化) ---
+# --- スタイル設定 (フルワイド最適化) ---
 st.markdown("""
     <style>
-    /* コンテンツ全体の最大幅を制限して中央寄せ */
+    /* コンテンツの最大幅制限を解除し、左右の余白を最小化 */
     .block-container {
-        max-width: 1000px;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        margin: auto;
+        max-width: 100% !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        padding-top: 1rem !important;
     }
 
-    /* 時計とメインカードのデザイン */
-    .clock-container { text-align: center; padding: 10px; margin-bottom: 20px; }
-    .clock-display { font-size: 3.5rem !important; font-weight: 900; color: #2563eb; margin: 0; }
-    .date-display { font-size: 1.3rem; color: #1e293b; font-weight: bold; }
+    /* 時計のデザイン */
+    .clock-container { text-align: center; padding: 10px; margin-bottom: 10px; }
+    .clock-display { font-size: 4rem !important; font-weight: 900; color: #2563eb; margin: 0; }
+    .date-display { font-size: 1.5rem; color: #1e293b; font-weight: bold; }
 
+    /* メインカードも横に広がるよう調整 */
     .main-card {
         background-color: #0f172a; color: white; padding: 30px; border-radius: 25px;
         text-align: center; margin-bottom: 30px; border: 4px solid #2563eb;
         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        width: 100%;
     }
 
-    /* 横スクロールコンテナ */
+    /* 横スクロールコンテナ（PCでもフルに活用） */
     .scroll-container {
         display: flex;
         overflow-x: auto;
         gap: 15px;
-        padding: 10px 5px 20px 5px;
+        padding: 10px 5px 25px 5px;
         -webkit-overflow-scrolling: touch;
     }
 
-    /* スクロールバーのデザイン（PCで見えやすく） */
-    .scroll-container::-webkit-scrollbar { height: 8px; }
+    /* スクロールバーを見やすく */
+    .scroll-container::-webkit-scrollbar { height: 10px; }
+    .scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
     .scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* 予報ボックス */
+    /* 予報ボックスのデザイン */
     .forecast-box {
-        flex: 0 0 120px; /* PC向けに少し幅を広げた */
-        background-color: white; padding: 15px; border-radius: 18px;
+        flex: 0 0 140px; /* PCで見栄えが良いように少し大きめに設定 */
+        background-color: white; padding: 20px; border-radius: 20px;
         text-align: center; border: 2px solid #e2e8f0;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
     }
+    .forecast-box:hover { transform: translateY(-5px); }
 
-    .time-label-large { font-size: 1.5rem !important; font-weight: 800; color: #1e293b; }
-    .temp-label-red { font-size: 1.4rem; font-weight: bold; color: #ef4444; }
+    .time-label-large { font-size: 1.6rem !important; font-weight: 800; color: #1e293b; }
+    .temp-label-red { font-size: 1.5rem; font-weight: bold; color: #ef4444; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -92,23 +99,26 @@ if city_input:
         current_data = min(forecast_list, key=lambda x: abs(datetime.fromtimestamp(x['dt'], JST) - now))
         icon_url = f"http://openweathermap.org/img/wn/{current_data['weather'][0]['icon']}@4x.png"
 
-        # メインカード
+        # メインカード（フルワイド表示）
         st.markdown(f"""
             <div class="main-card">
-                <h2 style="margin:0; color: #60a5fa; letter-spacing: 2px; font-size: 1.5rem;">{data['city']['name'].upper()}</h2>
-                <img src="{icon_url}" style="width:120px;">
-                <h1 style="font-size: 4.5rem; margin: 0;">{current_data['main']['temp']}℃</h1>
-                <p style="font-size: 1.8rem; margin: 0; font-weight: bold;">{current_data['weather'][0]['description']}</p>
-                <p style="font-size: 1rem; opacity: 0.8; margin-top: 10px;">
-                    湿度: {current_data['main']['humidity']}% / 風速: {current_data['wind']['speed']}m/s
-                </p>
+                <h2 style="margin:0; color: #60a5fa; letter-spacing: 3px; font-size: 1.8rem;">{data['city']['name'].upper()}</h2>
+                <img src="{icon_url}" style="width:140px;">
+                <h1 style="font-size: 5rem; margin: 0;">{current_data['main']['temp']}℃</h1>
+                <p style="font-size: 2rem; margin: 0; font-weight: bold;">{current_data['weather'][0]['description']}</p>
+                <div style="display: flex; justify-content: center; gap: 40px; margin-top: 20px; font-size: 1.2rem; opacity: 0.9;">
+                    <span>💧 湿度: {current_data['main']['humidity']}%</span>
+                    <span>💨 風速: {current_data['wind']['speed']}m/s</span>
+                    <span>🌡️ 体感: {current_data['main']['feels_like']}℃</span>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
         # 3時間ごとの詳細予報
         st.subheader("⏱️ 3時間ごとの詳細予報")
         timeline_html = '<div class="scroll-container">'
-        for item in forecast_list[:12]:
+        # PCサイトではより多くの予報（15件分など）を表示
+        for item in forecast_list[:15]:
             t_obj = datetime.fromtimestamp(item['dt'], JST)
             icon = item['weather'][0]['icon']
             temp = item['main']['temp']
@@ -116,9 +126,9 @@ if city_input:
             timeline_html += f"""
                 <div class="forecast-box">
                     <div class="time-label-large">{t_obj.strftime('%H:%M')}</div>
-                    <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="60">
+                    <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="70">
                     <div class="temp-label-red">{temp}℃</div>
-                    <div style="font-size:0.8rem; color:#1e293b; font-weight:bold;">{desc}</div>
+                    <div style="font-size:0.9rem; color:#1e293b; font-weight:bold; margin-top:5px;">{desc}</div>
                 </div>"""
         timeline_html += '</div>'
         st.markdown(timeline_html, unsafe_allow_html=True)
@@ -143,11 +153,11 @@ if city_input:
             desc = day_data['weather'][0]['description']
             week_html += f"""
                 <div class="forecast-box">
-                    <div class="time-label-large" style="font-size: 1.3rem !important;">{d_obj.strftime('%m/%d')}</div>
-                    <div style="color: #1e293b; font-weight: bold; font-size:0.9rem;">({d_obj.strftime('%a')})</div>
-                    <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="60">
+                    <div class="time-label-large" style="font-size: 1.4rem !important;">{d_obj.strftime('%m/%d')}</div>
+                    <div style="color: #1e293b; font-weight: bold; font-size:1rem;">({d_obj.strftime('%a')})</div>
+                    <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="70">
                     <div class="temp-label-red">{temp}℃</div>
-                    <div style="font-size:0.8rem; color:#1e293b; font-weight:bold;">{desc}</div>
+                    <div style="font-size:0.9rem; color:#1e293b; font-weight:bold; margin-top:5px;">{desc}</div>
                 </div>"""
         week_html += '</div>'
         st.markdown(week_html, unsafe_allow_html=True)
