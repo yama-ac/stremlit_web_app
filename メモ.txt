@@ -29,9 +29,10 @@ git status
 # gitの更新方法
 git add -A
 git commit -m "commit実行"
-git pull origin -A
-git pull --rebase origin -A
 git push -u origin main
 
+git pull origin -A
+git pull --rebase origin -A
+git push -f origin -A
 
 
