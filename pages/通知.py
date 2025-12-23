@@ -1,39 +1,14 @@
 import streamlit as st
 import time
-import streamlit.components.v1 as components
 
-# 1. ページ設定
-st.set_page_config(page_title="通知テスト", layout="centered")
+st.title("Streamlit 標準通知デモ")
 
-def send_notification(title, text):
-    # JavaScriptのコードを安全に生成
-    # JS内の { } は Pythonの f-string 内では {{ }} と書く必要があります
-    js_code = f"""
-    <script>
-    if (Notification.permission === "granted") {{
-        new Notification("{title}", {{ body: "{text}" }});
-    }} else {{
-        Notification.requestPermission().then(p => {{
-            if (p === "granted") {{
-                new Notification("{title}", {{ body: "{text}" }});
-            }}
-        }});
-    }}
-    </script>
-    """
-    components.html(js_code, height=0)
+if st.button("標準通知を表示"):
+    # 1. 右下にふわっと出るトースト
+    st.toast("データを保存しました！", icon="💾")
 
-st.title("🔔 デスクトップ通知アプリ")
+    # 2. 画面内に固定されるメッセージ
+    st.success("全ての処理が正常に完了しました。")
 
-if st.button("10秒タイマーを開始"):
-    st.info("タイマーを開始しました。他のアプリを開いてお待ちください。")
-
-    # プログレスバー
-    bar = st.progress(0)
-    for i in range(100):
-        time.sleep(0.1) # 合計10秒
-        bar.progress(i + 1)
-
-    # 通知実行
-    send_notification("タイマー完了", "10秒が経過しました！")
-    st.success("通知を送信しました。")
+    # 3. お祝いエフェクト
+    st.balloons()
